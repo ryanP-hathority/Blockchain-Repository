@@ -176,8 +176,11 @@ func remove(stub shim.ChaincodeStubInterface, args []string) (string, error) {
         }
 
         voterID := args[0]
-
-        err := stub.DelState(voterID)
+	keyvalue, err := stub.GetState(voterID)
+	if keyvalue == nil {
+		return "", fmt.Errorf("VoterID was not found in the blockchain")
+	}
+        err = stub.DelState(voterID)
         if err != nil {
                 return "", fmt.Errorf("Failed to delete vote: ", voterID, err)
         }
