@@ -98,6 +98,8 @@ func (v *SimpleChaincode) Invoke(stub shim.ChaincodeStubInterface) peer.Response
 		result, err = getVoterscandidate(stub, args)
 	} else if fn == "queryByID" {
 		result, err = queryByID(stub, args)
+	} else if fn == "getHistoryForVote" {
+		result, err = getHistoryForVote(stub, args)
 	} else {
 		fmt.Println("Invalid command")
 	}
@@ -249,12 +251,6 @@ func constructQueryResponseFromIterator(resultsIterator shim.StateQueryIteratorI
         return &buffer, nil
 }
 
-
-
-
-
-
-
 func tallyForcandidate(stub shim.ChaincodeStubInterface, args []string) (string, error) {
 	var result string
 
@@ -339,6 +335,64 @@ func queryByID(stub shim.ChaincodeStubInterface, args []string) (string, error) 
 	fmt.Println("result: " + string(result))
 
 	return string(result), nil
+}
+
+func constructHistoryResponseFromIterator(resultsIterator shim.HistoryQueryIteratorInterface) (*bytes.Buffer, error) {
+        // buffer is a JSON array containing QueryResults
+        var buffer bytes.Buffer
+        buffer.WriteString("[")
+
+        bArrayMemberAlreadyWritten := false
+        for resultsIterator.HasNext() {
+                queryResponse, err := resultsIterator.Next()
+                if err != nil {
+                        return nil, err
+                }
+                // Add a comma before array members, suppress it for the first array member
+                if bArrayMemberAlreadyWritten == true {
+                        buffer.WriteString(",")
+                }
+                buffer.WriteString("{\"Key\":")
+                buffer.WriteString("\"")
+                buffer.WriteString(queryResponse.TxId)
+                buffer.WriteString("\"")
+
+                buffer.WriteString(", \"Record\":")
+                // Record is a JSON object, so we write as-is
+                buffer.WriteString(string(queryResponse.Value))
+		//buffer.WriteString(", \"Deleted?\":")
+		//buffer.WriteString(string(queryResponse.IsDelete))
+		//buffer.WriteString(", \"Timestamp\":")
+		//buffer.WriteString(string(queryResponse.Timestamp))
+                buffer.WriteString("}")
+                bArrayMemberAlreadyWritten = true
+        }
+        buffer.WriteString("]")
+
+        return &buffer, nil
+}
+
+
+// Historyforkey returns the history of the specified asset key
+func getHistoryForVote(stub shim.ChaincodeStubInterface, args []string) (string, error) {
+	if len(args) != 1 {
+		return "", fmt.Errorf("Incorrect number of arguments. Expecting a voter ID")
+	}
+	fmt.Printf("- start getHistoryForVote: %s\n", args[0])
+
+	resultsIterator, err := stub.GetHistoryForKey(args[0])
+	if err != nil {
+		return "", fmt.Errorf("Failed to get query results: " + err.Error())
+	}
+	defer resultsIterator.Close()
+
+	buffer, err := constructHistoryResponseFromIterator(resultsIterator)
+	if err != nil {
+		return "", fmt.Errorf("Failed to construct query response: " + err.Error())
+	}
+
+
+	return "- getHistoryForVote queryResult: " + buffer.String(), nil
 }
 
 /*
