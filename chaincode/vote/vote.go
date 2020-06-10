@@ -5,6 +5,8 @@ import (
 	"bytes"
 	"encoding/json"
 	"strings"
+	"strconv"
+	"time"
 
         "github.com/hyperledger/fabric/core/chaincode/shim"
         "github.com/hyperledger/fabric/protos/peer"
@@ -379,13 +381,24 @@ func constructHistoryResponseFromIterator(resultsIterator shim.HistoryQueryItera
 
                 buffer.WriteString(", \"Record\":")
                 // Record is a JSON object, so we write as-is
-                buffer.WriteString(string(queryResponse.Value))
-		//buffer.WriteString(", \"Deleted?\":")
-		//buffer.WriteString(string(queryResponse.IsDelete))
-		//buffer.WriteString(", \"Timestamp\":")
-		//buffer.WriteString(string(queryResponse.Timestamp))
-                buffer.WriteString("}")
-                bArrayMemberAlreadyWritten = true
+                if queryResponse.IsDelete {
+			buffer.WriteString("null")
+		} else {
+			buffer.WriteString(string(queryResponse.Value))
+		}
+
+		buffer.WriteString(", \"Timestamp\":")
+		buffer.WriteString("\"")
+		buffer.WriteString(time.Unix(queryResponse.Timestamp.Seconds, int64(queryResponse.Timestamp.Nanos)).String())
+		buffer.WriteString("\"")
+
+		buffer.WriteString(", \"IsDelete\":")
+		buffer.WriteString("\"")
+		buffer.WriteString(strconv.FormatBool(queryResponse.IsDelete))
+		buffer.WriteString("\"")
+
+		buffer.WriteString("}")
+		bArrayMemberAlreadyWritten = true
         }
         buffer.WriteString("]")
 
