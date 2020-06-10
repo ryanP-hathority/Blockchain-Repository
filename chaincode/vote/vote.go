@@ -43,14 +43,16 @@ func (v *SimpleChaincode) Init(stub shim.ChaincodeStubInterface) peer.Response {
 
 	voterName        := strings.ToLower(args[0])
         candidateName    := strings.ToLower(args[1])
-        var attributesForKey []string
-        attributesForKey = append(attributesForKey, voterName)
-        attributesForKey = append(attributesForKey, candidateName)
-        key, err         := stub.CreateCompositeKey("vote", attributesForKey)
-
-        if err != nil {
-                return shim.Error("Failed to create key: " + err.Error())
-        }
+        //var attributesForKey []string
+        //attributesForKey = append(attributesForKey, voterName)
+        //attributesForKey = append(attributesForKey, candidateName)
+        //key, err         := stub.CreateCompositeKey("vote", attributesForKey)
+	
+	//USING TXID:::::
+	key := stub.GetTxID()
+        //if err != nil {
+        //        return shim.Error("Failed to create key: " + err.Error())
+        //}
 
 	vote := Vote{voterName, candidateName}
 	voteJSONAsBytes, err := json.Marshal(vote)
@@ -252,10 +254,28 @@ func constructQueryResponseFromIterator(resultsIterator shim.StateQueryIteratorI
 }
 
 func tallyForcandidate(stub shim.ChaincodeStubInterface, args []string) (string, error) {
-	var result string
+	//candidate := args[0]
+	resultsIterator, err := stub.GetStateByRange("", "")
+        if err != nil {
+                return "", fmt.Errorf("Failed to get query results: " + err.Error())
+        }
+        defer resultsIterator.Close()
+
+        buffer, err := constructQueryResponseFromIterator(resultsIterator)
+        if err != nil {
+                 return "", fmt.Errorf("Failed to construct query response: " + err.Error())
+        }
+
+        var voteContents []voteList
+        noBackSlashes := strings.Replace(buffer.String(), "\\", "", -1)
+        json.Unmarshal([]byte(noBackSlashes), &voteContents)
+        fmt.Printf("Contents: %+v", voteContents)
+        //err = json.Unmarshal([]byte(buffer.String()), &arr.Array)
 
 
-	return result, nil
+        //fmt.Printf("- getVotesByRange queryResult:\n%s\n", buffer.String())
+
+        return "- getVotesByRange queryResult: " + buffer.String(), nil
 }
 
 func changeVote(stub shim.ChaincodeStubInterface, args []string) (string, error) {
@@ -373,7 +393,7 @@ func constructHistoryResponseFromIterator(resultsIterator shim.HistoryQueryItera
 }
 
 
-// Historyforkey returns the history of the specified asset key
+// getHistoryForVote returns the history of the specified asset key
 func getHistoryForVote(stub shim.ChaincodeStubInterface, args []string) (string, error) {
 	if len(args) != 1 {
 		return "", fmt.Errorf("Incorrect number of arguments. Expecting a voter ID")
