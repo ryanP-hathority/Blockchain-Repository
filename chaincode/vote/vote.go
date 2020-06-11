@@ -16,11 +16,9 @@ import (
 type SimpleChaincode struct {
 }
 
-
 type Vote struct {
 	VoterName  string `json:"voter"`
 	Candidate  string `json:"candidate"`
-
 }
 
 type voteList struct {
@@ -75,7 +73,6 @@ func (v *SimpleChaincode) Init(stub shim.ChaincodeStubInterface) peer.Response {
         fmt.Println("   candidate: " + candidateName)
 
         return shim.Success(nil)
-
 }
 
 // Invoke is called per transaction on the chaincode. Each transaction is
@@ -114,9 +111,9 @@ func (v *SimpleChaincode) Invoke(stub shim.ChaincodeStubInterface) peer.Response
 
         // Return the result as success payload
         return shim.Success([]byte(result))
-
 }
 
+//insert creates a new vote and stores it into the chaincode state.
 func insert(stub shim.ChaincodeStubInterface, args []string) (string, error) {
 	var result string
 
@@ -169,7 +166,7 @@ func insert(stub shim.ChaincodeStubInterface, args []string) (string, error) {
 	return result, nil
 }
 
-
+//remove removes a vote key/value pair from the chaincode state.
 func remove(stub shim.ChaincodeStubInterface, args []string) (string, error) {
 	var result string
         if len(args) != 1 {
@@ -255,6 +252,8 @@ func constructQueryResponseFromIterator(resultsIterator shim.StateQueryIteratorI
         return &buffer, nil
 }
 
+// tallyForcandidate parses the chaincode and returns a string value of how many votes
+// there are for a specific candidate.
 func tallyForcandidate(stub shim.ChaincodeStubInterface, args []string) (string, error) {
 	//candidate := args[0]
 	resultsIterator, err := stub.GetStateByRange("", "")
@@ -280,6 +279,7 @@ func tallyForcandidate(stub shim.ChaincodeStubInterface, args []string) (string,
         return "- getVotesByRange queryResult: " + buffer.String(), nil
 }
 
+//changeVote changes a vote by setting a new candidate name on the vote.
 func changeVote(stub shim.ChaincodeStubInterface, args []string) (string, error) {
 	//var key []byte
         var result2 string
@@ -329,7 +329,6 @@ func changeVote(stub shim.ChaincodeStubInterface, args []string) (string, error)
         fmt.Println(" - end changeVote")
         result2 = "Changed Vote"
         return result2, nil
-
 }
 
 func getVoterscandidate(stub shim.ChaincodeStubInterface, args []string) (string, error) {
@@ -338,6 +337,7 @@ func getVoterscandidate(stub shim.ChaincodeStubInterface, args []string) (string
 	return result, nil
 }
 
+//queryByID reads a vote from the chaincode state by the ID.
 func queryByID(stub shim.ChaincodeStubInterface, args []string) (string, error) {
 	if len(args) != 1 {
 		return "", fmt.Errorf("Incorrect number of arguments. Expecting a voter ID")
