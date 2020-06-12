@@ -214,8 +214,6 @@ func tallyAll(stub shim.ChaincodeStubInterface, args []string) (string, error) {
 	json.Unmarshal([]byte(noBackSlashes), &voteContents)
 	fmt.Printf("Contents: %+v", voteContents)
 	//err = json.Unmarshal([]byte(buffer.String()), &arr.Array)
-
-
 	//fmt.Printf("- getVotesByRange queryResult:\n%s\n", buffer.String())
 
 	return "- getVotesByRange queryResult: " + buffer.String(), nil
@@ -254,30 +252,28 @@ func constructQueryResponseFromIterator(resultsIterator shim.StateQueryIteratorI
 
 // tallyForcandidate parses the chaincode and returns a string value of how many votes
 // there are for a specific candidate.
+
 func tallyForcandidate(stub shim.ChaincodeStubInterface, args []string) (string, error) {
-	//candidate := args[0]
+
+	if len(args) != 1 {
+		return "", fmt.Errorf("Incorrect number of arguments. Expecting a candidate.")
+	}
+	
 	resultsIterator, err := stub.GetStateByRange("", "")
-        if err != nil {
-                return "", fmt.Errorf("Failed to get query results: " + err.Error())
+	if err != nil {
+		return "", fmt.Errorf("Failed to get query results: " + err.Error())
         }
         defer resultsIterator.Close()
-
-        buffer, err := constructQueryResponseFromIterator(resultsIterator)
+	candidate := strings.ToLower(args[0])
+	buffer, err := constructQueryResponseFromIterator(resultsIterator)
         if err != nil {
                  return "", fmt.Errorf("Failed to construct query response: " + err.Error())
         }
-
-        var voteContents []voteList
-        noBackSlashes := strings.Replace(buffer.String(), "\\", "", -1)
-        json.Unmarshal([]byte(noBackSlashes), &voteContents)
-        fmt.Printf("Contents: %+v", voteContents)
-        //err = json.Unmarshal([]byte(buffer.String()), &arr.Array)
-
-
-        //fmt.Printf("- getVotesByRange queryResult:\n%s\n", buffer.String())
-
-        return "- getVotesByRange queryResult: " + buffer.String(), nil
+	resultingString := buffer.String()
+	count := strings.Count(resultingString, candidate)
+	return "- tallyForcandidate results: " + string(count), nil
 }
+
 
 //changeVote changes a vote by setting a new candidate name on the vote.
 func changeVote(stub shim.ChaincodeStubInterface, args []string) (string, error) {
