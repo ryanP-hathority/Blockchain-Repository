@@ -252,7 +252,6 @@ func constructQueryResponseFromIterator(resultsIterator shim.StateQueryIteratorI
 
 // tallyForcandidate parses the chaincode and returns a string value of how many votes
 // there are for a specific candidate.
-
 func tallyForcandidate(stub shim.ChaincodeStubInterface, args []string) (string, error) {
 
 	if len(args) != 1 {
@@ -270,7 +269,7 @@ func tallyForcandidate(stub shim.ChaincodeStubInterface, args []string) (string,
                  return "", fmt.Errorf("Failed to construct query response: " + err.Error())
         }
 	resultingString := buffer.String()
-	count := strings.Count(resultingString, candidate)
+	count := strings.Count(resultingString, `"candidate":"` + candidate)
 	return "- tallyForcandidate results: " + string(count), nil
 }
 
