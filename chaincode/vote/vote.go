@@ -197,26 +197,84 @@ func remove(stub shim.ChaincodeStubInterface, args []string) (string, error) {
 // tallyAll parses the chaincode and returns a string value of how many votes 
 // there are for each candidate. 
 func tallyAll(stub shim.ChaincodeStubInterface, args []string) (string, error) {
-
 	resultsIterator, err := stub.GetStateByRange("", "")
 	if err != nil {
 		return "", fmt.Errorf("Failed to get query results: " + err.Error())
 	}
 	defer resultsIterator.Close()
 
-	buffer, err := constructQueryResponseFromIterator(resultsIterator)
+	buffer, err := constructQueryResponseFromIteratorTallyAll(resultsIterator)
 	if err != nil {
 		 return "", fmt.Errorf("Failed to construct query response: " + err.Error())
 	}
 
-	var voteContents []voteList
-	noBackSlashes := strings.Replace(buffer.String(), "\\", "", -1)
-	json.Unmarshal([]byte(noBackSlashes), &voteContents)
-	fmt.Printf("Contents: %+v", voteContents)
-	//err = json.Unmarshal([]byte(buffer.String()), &arr.Array)
-	//fmt.Printf("- getVotesByRange queryResult:\n%s\n", buffer.String())
+	resultString := buffer.String()
+	noBackSlashes := strings.Replace(resultString, "\\", "", -1)
+	noleftBrackets := strings.Replace(noBackSlashes, `{`, ``, -1)
+	norightBrackets := strings.Replace(noleftBrackets, `}`, ``, -1)
+	noQuotes := strings.Replace(norightBrackets, `"`, ``, -1)
+	splitString := strings.Split(noQuotes, ",")
+	fmt.Println(splitString)
+	var candidates []string
+	i := 0
+	for range splitString {
+		if strings.HasPrefix(splitString[i], `candidate:`) == true {
+			found:= contains(candidates, splitString[i])
+			if found == false {
+				candidates = append(candidates, splitString[i])
+				i++
+				fmt.Println(candidates)
+			} else {
+				i++
+			}
+		} else {
+			i++
+		}
+	}
+	i = 0
+	var candidatesTally []string
+	newString := fmt.Sprint(splitString)
+	for range candidates {
+		count := strings.Count(newString, candidates[i])
+		candidatesTally = append(candidatesTally, candidates[i] + " - vote total: " + strconv.Itoa(count))
+		i++
+		fmt.Println(candidatesTally)
+	}
+	strCandidatesTally := strings.Join(candidatesTally, "\n")
+	result := strings.Join(candidatesTally, " ")
+	fmt.Println(strCandidatesTally)
+	return result, nil
+}
 
-	return "- getVotesByRange queryResult: " + buffer.String(), nil
+func contains(s []string, e string) bool {
+   for _, a := range s {
+      if a == e {
+         return true
+      }
+   }
+   return false
+}
+
+func constructQueryResponseFromIteratorTallyAll(resultsIterator shim.StateQueryIteratorInterface) (*bytes.Buffer, error) {
+        // buffer is a JSON array containing QueryResults
+        var buffer bytes.Buffer
+
+        bArrayMemberAlreadyWritten := false
+        for resultsIterator.HasNext() {
+                queryResponse, err := resultsIterator.Next()
+                if err != nil {
+                        return nil, err
+                }
+                // Add a comma before array members, suppress it for the first array member
+                if bArrayMemberAlreadyWritten == true {
+                        buffer.WriteString(",")
+                }
+                // Record is a JSON object, so we write as-is
+                buffer.WriteString(string(queryResponse.Value))
+                bArrayMemberAlreadyWritten = true
+        }
+
+        return &buffer, nil
 }
 
 func constructQueryResponseFromIterator(resultsIterator shim.StateQueryIteratorInterface) (*bytes.Buffer, error) {
