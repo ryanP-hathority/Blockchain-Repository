@@ -188,7 +188,7 @@ func remove(stub shim.ChaincodeStubInterface, args []string) (string, error) {
                 return "", fmt.Errorf("Failed to delete vote: ", voterID, err)
         }
 
-        fmt.Println(" - end deleting vote")
+        fmt.Println(" - End deleting vote")
         result = "Deleted Vote"
 
         return result, nil
@@ -214,7 +214,7 @@ func tallyAll(stub shim.ChaincodeStubInterface, args []string) (string, error) {
 	norightBrackets := strings.Replace(noleftBrackets, `}`, ``, -1)
 	noQuotes := strings.Replace(norightBrackets, `"`, ``, -1)
 	splitString := strings.Split(noQuotes, ",")
-	fmt.Println(splitString)
+	fmt.Println(" - Begin iterating through votes")
 	var candidates []string
 	i := 0
 	for range splitString {
@@ -223,7 +223,6 @@ func tallyAll(stub shim.ChaincodeStubInterface, args []string) (string, error) {
 			if found == false {
 				candidates = append(candidates, splitString[i])
 				i++
-				fmt.Println(candidates)
 			} else {
 				i++
 			}
@@ -231,6 +230,10 @@ func tallyAll(stub shim.ChaincodeStubInterface, args []string) (string, error) {
 			i++
 		}
 	}
+	if len(candidates) == 0 {
+		return "", fmt.Errorf("No votes in blockchain to tally")
+	}
+	fmt.Println(" - Begin tallying votes for each candidate")
 	i = 0
 	var candidatesTally []string
 	newString := fmt.Sprint(splitString)
@@ -238,10 +241,10 @@ func tallyAll(stub shim.ChaincodeStubInterface, args []string) (string, error) {
 		count := strings.Count(newString, candidates[i])
 		candidatesTally = append(candidatesTally, candidates[i] + " - vote total: " + strconv.Itoa(count))
 		i++
-		fmt.Println(candidatesTally)
 	}
 	strCandidatesTally := strings.Join(candidatesTally, "\n")
 	result := strings.Join(candidatesTally, " ")
+	fmt.Println(" - End tallying votes")
 	fmt.Println(strCandidatesTally)
 	return result, nil
 }
@@ -356,8 +359,6 @@ func changeVote(stub shim.ChaincodeStubInterface, args []string) (string, error)
         voterID := args[0]
         voterName := strings.ToLower(args[1])
         newCandidate := strings.ToLower(args[2])
-        //newCandidate := strings.ToLower(args[2])
-        fmt.Println("- start changeVote")
 
         key, err := stub.GetState(voterID)
         if key != nil {
