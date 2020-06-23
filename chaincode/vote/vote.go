@@ -6,8 +6,8 @@ import (
 	"encoding/json"
 	"strings"
 
-        "github.com/hyperledger/fabric/core/chaincode/shim"
-        "github.com/hyperledger/fabric/protos/peer"
+	"github.com/hyperledger/fabric-chaincode-go/shim"
+        "github.com/hyperledger/fabric-protos-go/peer"
 )
 
 // vote implements a chaincode to manage a vote
@@ -254,7 +254,7 @@ func constructQueryResponseFromIterator(resultsIterator shim.StateQueryIteratorI
 
 func tallyForcandidate(stub shim.ChaincodeStubInterface, args []string) (string, error) {
 	var result string
-
+	
 
 	return result, nil
 }
@@ -337,6 +337,36 @@ func queryByID(stub shim.ChaincodeStubInterface, args []string) (string, error) 
 
 	return string(result), nil
 }
+
+func createJSON(args []string) (string, error) {
+	
+
+	if args[0] == "insert" {
+		//form insert json
+
+
+        } else if args[0] == "delete"{
+		//form delete json
+	} else if fn == "tallyAll" {
+                //form tallyAll json
+        } else if fn == "tallyForcandidate" {
+                //form tallyFOrcandidate json
+        } else if fn == "changeVote" {
+                //form changeVote json
+        } else if fn == "getVoterscandidate" {
+                //form getVoterscandidate json
+        } else if fn == "queryByID" {
+                //form queryByID json
+        } else {
+                fmt.Println("Invalid command")
+        }
+
+
+
+
+	return string(result), nil
+}
+
 
 /*
 func set(stub shim.ChaincodeStubInterface, args []string) (string, error) {
