@@ -10,10 +10,12 @@ import (
 
         "github.com/hyperledger/fabric/core/chaincode/shim"
         "github.com/hyperledger/fabric/protos/peer"
+	"github.com/hyperledger/fabric-contract-api-go/contractapi"
 )
 
 // vote implements a chaincode to manage a vote
-type SimpleChaincode struct {
+type SmartContract struct {
+	contractapi.Contract
 }
 
 type Vote struct {
@@ -29,7 +31,7 @@ type voteList struct {
 //Init is called during chaincode instantiation to initialize any
 //data. Note that chaincode upgrade also calls this function to reset
 //or to migrate data.
-func (v *SimpleChaincode) Init(stub shim.ChaincodeStubInterface) peer.Response {
+func (v *SmartContract) InitLedger(ctx contractapi.TransactionContextInterface) error {
 	fmt.Println(" - Inititializing the chaincode")
 	// Get the args from the transaction proposal1
 	args := stub.GetStringArgs()
