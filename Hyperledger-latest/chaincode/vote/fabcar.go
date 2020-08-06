@@ -18,6 +18,11 @@ import (
 )
 
 func main() {
+	verifyIdentity()
+}
+
+
+func verifyIdentity() {
 	os.Setenv("DISCOVERY_AS_LOCALHOST", "true")
 	wallet, err := gateway.NewFileSystemWallet("wallet")
 	if err != nil {
