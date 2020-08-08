@@ -1,16 +1,20 @@
 package main
 
 import (
-	"bytes"
+	//"bytes"
 	"encoding/json"
 	"fmt"
 	"strconv"
-	"strings"
-	"time"
+	//"strings"
+	//"time"
+	"os"
+	"errors"
+	"io/ioutil"
+	"path/filepath"
 
+	"github.com/hyperledger/fabric-sdk-go/pkg/core/config"
+	"github.com/hyperledger/fabric-sdk-go/pkg/gateway"
 	"github.com/hyperledger/fabric-contract-api-go/contractapi"
-	"github.com/hyperledger/fabric/core/chaincode/shim"
-	"github.com/hyperledger/fabric/protos/peer"
 )
 
 // vote implements a chaincode to manage a vote
@@ -31,48 +35,26 @@ type voteList struct {
 //Init is called during chaincode instantiation to initialize any
 //data. Note that chaincode upgrade also calls this function to reset
 //or to migrate data.
-func (v *SmartContract) InitLedger(ctx contractapi.TransactionContextInterface) error {
-	fmt.Println(" - Inititializing the chaincode")
-	// Get the args from the transaction proposal
-	args := ctx.GetStub().GetStringArgs()
-	if len(args) != 2 {
-		return fmt.Errorf("Incorrect arguments. Expecting a voter's name and a candidate. %s", err.Error())
+// InitLedger adds a base set of cars to the ledger
+func (s *SmartContract) InitLedger(ctx contractapi.TransactionContextInterface) error {
+	votes := []Vote{
+		Vote{VoterName: "Andrew", Candidate: "Joe"},
+		Vote{VoterName: "Ryan", Candidate: "Ben"},
+		Vote{VoterName: "Saiteja", Candidate: "Kamala"},
 	}
 
-	// Set up any variables or assets here by calling ctx.GetStub().PutState()
+	for i, vote := range votes {
+		voteAsBytes, _ := json.Marshal(vote)
+		err := ctx.GetStub().PutState("VOTE"+strconv.Itoa(i), voteAsBytes)
 
-	//formed args into bytes using the json function
-
-	voterName := strings.ToLower(args[0])
-	candidateName := strings.ToLower(args[1])
-
-	//USING TXID:::::
-	key := ctx.GetStub().GetTxID()
-	//if err != nil {
-	//        return shim.Error("Failed to create key: " + err.Error())
-	//}
-
-	vote := Vote{voterName, candidateName}
-	voteJSONAsBytes, err := json.Marshal(vote)
-
-	if err != nil {
-		return shim.Error("Failed to construct vote: " + err.Error())
+		if err != nil {
+			return fmt.Errorf("Failed to put to world state. %s", err.Error())
+		}
 	}
-
-	// We store the key and the value on the ledger
-	err = ctx.GetStub().PutState(key, voteJSONAsBytes)
-	if err != nil {
-		return fmt.Errorf("Failed to create asset: %s", args[0])
-	}
-
-	fmt.Printf(" - end initializing chaincode\n")
-	fmt.Println("   key: " + key)
-	fmt.Println("   voter: " + voterName)
-	fmt.Println("   candidate: " + candidateName)
 
 	return nil
 }
-
+/*
 // Invoke is called per transaction on the chaincode. Each transaction is
 // either a 'get' or a 'set' on the asset created by Init function. The Set
 // method may create a new asset by specifying a new key-value pair.
@@ -110,54 +92,20 @@ func (v *SmartContract) Invoke(ctx contractapi.TransactionContextInterface) peer
 	// Return the result as success payload
 	return shim.Success([]byte(result))
 }
-
+*/
 //insert creates a new vote and stores it into the chaincode state.
-func (v *SmartContract) insert(ctx contractapi.TransactionContextInterface, args []string) (string, error) {
-	var result string
-
-	if len(args) != 2 {
-		return "", fmt.Errorf("Expecting two arguments. Both voter and candidate are required")
-	}
-	fmt.Println(" - Begin initializing vote")
-
-	// verify inputs
-	if len(args[0]) <= 0 {
-		return "", fmt.Errorf("Expecting a non-empty string for the voter field")
-	}
-	if len(args[1]) <= 0 {
-		return "", fmt.Errorf("Expecting a non-empty string for the candidate field")
+func (v *SmartContract) insert(ctx contractapi.TransactionContextInterface, voterKey string, votername string, candidate string,) error {
+	vote := Vote{
+		VoterName:   votername,
+		Candidate:  candidate,
 	}
 
-	voterName := strings.ToLower(args[0])
-	candidateName := strings.ToLower(args[1])
+	voteAsBytes, _ := json.Marshal(vote)
 
-	//USING TXID:::::
-	key = ctx.GetStub().GetTxID()
-	if err != nil {
-		return "", fmt.Errorf("Failed to create key: " + err.Error())
-	}
-	//TODO: possibly need to verify the voter and candidate do not exist in the ledger
+	return ctx.GetStub().PutState(voterKey, voteAsBytes)
 
-	vote := Vote{VoterName: voterName, Candidate: candidateName}
-	voteJSONAsBytes, err := json.Marshal(vote)
-	if err != nil {
-		return "", fmt.Errorf("Failed to construct vote: " + err.Error())
-	}
-
-	err = ctx.GetStub().PutState(key, voteJSONAsBytes)
-	if err != nil {
-		return "", fmt.Errorf("Failed to insert vote: " + err.Error())
-	}
-
-	fmt.Println(" - end initializing vote")
-	fmt.Println("	key: " + key)
-	fmt.Println("	voter: " + voterName)
-	fmt.Println("	candidate: " + candidateName)
-	result = "Created Vote for voter " + voterName + " with key: " + key
-
-	return result, nil
 }
-
+/*
 //remove removes a vote key/value pair from the chaincode state.
 func (v *SmartContract) remove(ctx contractapi.TransactionContextInterface, args []string) error {
 	var result string
@@ -194,6 +142,23 @@ func (v *SmartContract) tallyAll(ctx contractapi.TransactionContextInterface, ar
 		return "", fmt.Errorf("Failed to get query results: " + err.Error())
 	}
 	defer resultsIterator.Close()
+
+	var buffer bytes.Buffer
+
+	bArrayMemberAlreadyWritten := false
+	for resultsIterator.HasNext() {
+		queryResponse, err := resultsIterator.Next()
+		if err != nil {
+			return nil, err
+		}
+		// Add a comma before array members, suppress it for the first array member
+		if bArrayMemberAlreadyWritten == true {
+			buffer.WriteString(",")
+		}
+		// Record is a JSON object, so we write as-is
+		buffer.WriteString(string(queryResponse.Value))
+		bArrayMemberAlreadyWritten = true
+	}
 
 	buffer, err := constructQueryResponseFromIteratorTallyAll(resultsIterator)
 	if err != nil {
@@ -240,7 +205,7 @@ func (v *SmartContract) tallyAll(ctx contractapi.TransactionContextInterface, ar
 	fmt.Println(strCandidatesTally)
 	return result, nil
 }
-
+*/
 func contains(s []string, e string) bool {
 	for _, a := range s {
 		if a == e {
@@ -249,7 +214,7 @@ func contains(s []string, e string) bool {
 	}
 	return false
 }
-
+/*
 func constructQueryResponseFromIteratorTallyAll(resultsIterator shim.StateQueryIteratorInterface) (*bytes.Buffer, error) {
 	// buffer is a JSON array containing QueryResults
 	var buffer bytes.Buffer
@@ -325,85 +290,46 @@ func (v *SmartContract) tallyForcandidate(ctx contractapi.TransactionContextInte
 	count := strings.Count(resultingString, `"candidate":"`+candidate)
 	return "- tallyForcandidate results: " + string(count), nil
 }
-
+*/
 //changeVote changes a vote by setting a new candidate name on the vote.
-func (v *SmartContract) changeVote(ctx contractapi.TransactionContextInterface, args []string) (string, error) {
-	//var key []byte
-	var result2 string
+func (v *SmartContract) ChangeCandidate(ctx contractapi.TransactionContextInterface, voterKey string, newCandidate string) error {
+	vote, err := v.QueryVote(ctx, voterKey)
 
-	//      0          1                   2
-	// "voterID", "Andrew Bradjan", "Bernie Sanders"
-	if len(args) != 3 {
-		return "", fmt.Errorf("Incorrect number of arguments. Expecting a voter ID and a new Candidate")
-	}
-	fmt.Println(" - Begin changing vote")
-
-	if len(args[0]) <= 0 {
-		return "", fmt.Errorf("Expecting a non-empty string for the voter ID field")
-	}
-	if len(args[1]) <= 0 {
-		return "", fmt.Errorf("Expecting a non-empty string for the voter name field")
-	}
-	if len(args[2]) <= 0 {
-		return "", fmt.Errorf("Expecting a non-empty string for the new candidate field")
-	}
-	voterID := args[0]
-	voterName := strings.ToLower(args[1])
-	newCandidate := strings.ToLower(args[2])
-
-	key, err := ctx.GetStub().GetState(voterID)
-	if key != nil {
-		return "", fmt.Errorf("Failed to get vote:" + voterID)
-	}
 	if err != nil {
-		return "", fmt.Errorf("Failed to get vote:" + voterID)
+		return err
 	}
 
-	vote := Vote{VoterName: voterName, Candidate: newCandidate}
-	voteJSONAsBytes, err := json.Marshal(vote)
-	if err != nil {
-		return "", fmt.Errorf("Failed to construct new vote: " + err.Error())
-	}
-	//err = ctx.GetStub().PutState(key, voteJSONAsBytes)
-	//if err != nil {
+	vote.Candidate = newCandidate
 
-	err = ctx.GetStub().PutState(voterID, voteJSONAsBytes) //rewrite the vote
-	if err != nil {
-		return "", fmt.Errorf("Failed to change vote:" + err.Error())
-	}
-	fmt.Println(" - end changeVote")
-	result2 = "Changed Vote"
-	return result2, nil
+	voteAsBytes, _ := json.Marshal(vote)
+
+	return ctx.GetStub().PutState(voterKey, voteAsBytes)
 }
-
+/*
 func (v *SmartContract) getVoterscandidate(ctx contractapi.TransactionContextInterface, args []string) (string, error) {
 	var result string
 
 	return result, nil
 }
-
-//queryByID reads a vote from the chaincode state by the ID.
-func (v *SmartContract) queryByID(ctx contractapi.TransactionContextInterface, args []string) (string, error) {
-	if len(args) != 1 {
-		return "", fmt.Errorf("Incorrect number of arguments. Expecting a voter ID")
-	}
-
-	//key := args[0]
-	//fmt.Println("Querying chaincode for key: " + key)
-	result, err := ctx.GetStub().GetState(args[0])
+*/
+//queryVote reads a vote from the chaincode state by the ID.
+func (v *SmartContract) QueryVote(ctx contractapi.TransactionContextInterface, voterKey string) (*Vote, error) {
+	voteAsBytes, err := ctx.GetStub().GetState(voterKey)
 
 	if err != nil {
-		return "", fmt.Errorf("Failed to get asset: %s with error: %s", args[0], err)
-	}
-	if result == nil {
-		return "", fmt.Errorf("Asset not found: %s", args[0])
+		return nil, fmt.Errorf("Failed to read from world state. %s", err.Error())
 	}
 
-	fmt.Println("result: " + string(result))
+	if voteAsBytes == nil {
+		return nil, fmt.Errorf("%s does not exist", voterKey)
+	}
 
-	return string(result), nil
+	vote := new(Vote)
+	_ = json.Unmarshal(voteAsBytes, vote)
+
+	return vote, nil
 }
-
+/*
 func constructHistoryResponseFromIterator(resultsIterator shim.HistoryQueryIteratorInterface) (*bytes.Buffer, error) {
 	// buffer is a JSON array containing QueryResults
 	var buffer bytes.Buffer
@@ -470,7 +396,7 @@ func (v *SmartContract) getHistoryForVote(ctx contractapi.TransactionContextInte
 
 	return "- getHistoryForVote queryResult: " + buffer.String(), nil
 }
-
+*/
 /*
 func set(ctx contractapi.TransactionContextInterface, args []string) (string, error) {
         if len(args) != 2 {
@@ -483,6 +409,7 @@ func set(ctx contractapi.TransactionContextInterface, args []string) (string, er
         return args[1], nil
 }
 */
+/*
 // Get returns the value of the specified asset key
 func (v *SmartContract) getValue(ctx contractapi.TransactionContextInterface, args []string) (string, error) {
 	if len(args) != 1 {
@@ -498,6 +425,129 @@ func (v *SmartContract) getValue(ctx contractapi.TransactionContextInterface, ar
 	}
 	return string(value), nil
 }
+*/
+func verifyIdentity() {
+	os.Setenv("DISCOVERY_AS_LOCALHOST", "true")
+	wallet, err := gateway.NewFileSystemWallet("wallet")
+	if err != nil {
+		fmt.Printf("Failed to create wallet: %s\n", err)
+		os.Exit(1)
+	}
+
+	if !wallet.Exists("appUser") {
+		err = populateWallet(wallet)
+		if err != nil {
+			fmt.Printf("Failed to populate wallet contents: %s\n", err)
+			os.Exit(1)
+		}
+	}
+
+	ccpPath := filepath.Join(
+		"..",
+		"..",
+		"test-network",
+		"organizations",
+		"peerOrganizations",
+		"org1.example.com",
+		"connection-org1.yaml",
+	)
+
+	gw, err := gateway.Connect(
+		gateway.WithConfig(config.FromFile(filepath.Clean(ccpPath))),
+		gateway.WithIdentity(wallet, "appUser"),
+	)
+	if err != nil {
+		fmt.Printf("Failed to connect to gateway: %s\n", err)
+		os.Exit(1)
+	}
+	defer gw.Close()
+
+	network, err := gw.GetNetwork("mychannel")
+	if err != nil {
+		fmt.Printf("Failed to get network: %s\n", err)
+		os.Exit(1)
+	}
+
+	contract := network.GetContract("vote")
+
+	result, err := contract.EvaluateTransaction("queryAllCars")
+	if err != nil {
+		fmt.Printf("Failed to evaluate transaction: %s\n", err)
+		os.Exit(1)
+	}
+	fmt.Println(string(result))
+
+	result, err = contract.SubmitTransaction("createCar", "CAR10", "VW", "Polo", "Grey", "Mary")
+	if err != nil {
+		fmt.Printf("Failed to submit transaction: %s\n", err)
+		os.Exit(1)
+	}
+	fmt.Println(string(result))
+
+	result, err = contract.EvaluateTransaction("queryCar", "CAR10")
+	if err != nil {
+		fmt.Printf("Failed to evaluate transaction: %s\n", err)
+		os.Exit(1)
+	}
+	fmt.Println(string(result))
+
+	_, err = contract.SubmitTransaction("changeCarOwner", "CAR10", "Archie")
+	if err != nil {
+		fmt.Printf("Failed to submit transaction: %s\n", err)
+		os.Exit(1)
+	}
+
+	result, err = contract.EvaluateTransaction("queryCar", "CAR10")
+	if err != nil {
+		fmt.Printf("Failed to evaluate transaction: %s\n", err)
+		os.Exit(1)
+	}
+	fmt.Println(string(result))
+}
+
+func populateWallet(wallet *gateway.Wallet) error {
+	credPath := filepath.Join(
+		"..",
+		"..",
+		"test-network",
+		"organizations",
+		"peerOrganizations",
+		"org1.example.com",
+		"users",
+		"User1@org1.example.com",
+		"msp",
+	)
+
+	certPath := filepath.Join(credPath, "signcerts", "User1@org1.example.com-cert.pem")
+	// read the certificate pem
+	cert, err := ioutil.ReadFile(filepath.Clean(certPath))
+	if err != nil {
+		return err
+	}
+
+	keyDir := filepath.Join(credPath, "keystore")
+	// there's a single file in this dir containing the private key
+	files, err := ioutil.ReadDir(keyDir)
+	if err != nil {
+		return err
+	}
+	if len(files) != 1 {
+		return errors.New("keystore folder should have contain one file")
+	}
+	keyPath := filepath.Join(keyDir, files[0].Name())
+	key, err := ioutil.ReadFile(filepath.Clean(keyPath))
+	if err != nil {
+		return err
+	}
+
+	identity := gateway.NewX509Identity("Org1MSP", string(cert), string(key))
+
+	err = wallet.Put("appUser", identity)
+	if err != nil {
+		return err
+	}
+	return nil
+}
 
 // main function starts up the chaincode in the container during instantiate
 func main() {
@@ -512,3 +562,4 @@ func main() {
 		fmt.Printf("Error starting vote chaincode: %s", err.Error())
 	}
 }
+
