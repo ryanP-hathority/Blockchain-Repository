@@ -1,11 +1,11 @@
 package main
 
 import (
-	//"bytes"
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"strconv"
-	//"strings"
+	"strings"
 	//"time"
 	"os"
 	"errors"
@@ -133,10 +133,10 @@ func (v *SmartContract) remove(ctx contractapi.TransactionContextInterface, args
 
 	return result, nil
 }
-
+*/
 // tallyAll parses the chaincode and returns a string value of how many votes
 // there are for each candidate.
-func (v *SmartContract) tallyAll(ctx contractapi.TransactionContextInterface, args []string) (string, error) {
+func (v *SmartContract) tallyAll(ctx contractapi.TransactionContextInterface) (string, error) {
 	resultsIterator, err := ctx.GetStub().GetStateByRange("", "")
 	if err != nil {
 		return "", fmt.Errorf("Failed to get query results: " + err.Error())
@@ -149,7 +149,7 @@ func (v *SmartContract) tallyAll(ctx contractapi.TransactionContextInterface, ar
 	for resultsIterator.HasNext() {
 		queryResponse, err := resultsIterator.Next()
 		if err != nil {
-			return nil, err
+			return "", err
 		}
 		// Add a comma before array members, suppress it for the first array member
 		if bArrayMemberAlreadyWritten == true {
@@ -159,12 +159,12 @@ func (v *SmartContract) tallyAll(ctx contractapi.TransactionContextInterface, ar
 		buffer.WriteString(string(queryResponse.Value))
 		bArrayMemberAlreadyWritten = true
 	}
-
+	/*
 	buffer, err := constructQueryResponseFromIteratorTallyAll(resultsIterator)
 	if err != nil {
 		return "", fmt.Errorf("Failed to construct query response: " + err.Error())
 	}
-
+	*/
 	resultString := buffer.String()
 	noBackSlashes := strings.Replace(resultString, "\\", "", -1)
 	noleftBrackets := strings.Replace(noBackSlashes, `{`, ``, -1)
@@ -205,7 +205,7 @@ func (v *SmartContract) tallyAll(ctx contractapi.TransactionContextInterface, ar
 	fmt.Println(strCandidatesTally)
 	return result, nil
 }
-*/
+
 func contains(s []string, e string) bool {
 	for _, a := range s {
 		if a == e {
