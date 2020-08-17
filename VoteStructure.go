@@ -2,7 +2,7 @@ package main
 
 import (
 	"fmt"
-	"strings"
+	//"strings"
 )
 
 type Candidate struct {
@@ -16,7 +16,7 @@ type GovernmentRole struct {
 	listOfCandidates []Candidate
 }
 
-type Ballot stuct {
+type Ballot struct {
 	ballotName string
 	numOfRoles int
 	listOfRoles []GovernmentRole
@@ -24,23 +24,57 @@ type Ballot stuct {
 
 
 func main() {
-	ballot := Ballot{
-		ballotName: "blockchain vote test",
-		numOfRoles: 1,
+	var candidate = Candidate {
+		candidateName: "Ryan Patterson",
+		isElected: true,
+	}
 
-		listOfRoles: []GovernmentRole{
-			roleName: "U.S. President",
-			numEligable: 1,
+	fmt.Println(candidate.candidateName)
+	if (candidate.isElected) {
+		fmt.Println("elected")
+	}
 
-			listOfCandidates []Candidate{
+	var role = GovernmentRole {
+		roleName: "U.S. President",
+		numEligable: 1,
+		listOfCandidates: []Candidate {
+			Candidate {
 				candidateName: "Ryan Patterson",
 				isElected: true,
 			},
 		},
 	}
+
+	fmt.Println(role.roleName)
+	fmt.Println(role.numEligable)
+	fmt.Println(role.listOfCandidates[0].candidateName)
+
+
+
+
+	var ballot = Ballot{
+		ballotName: "blockchain vote test",
+		numOfRoles: 1,
+
+		listOfRoles: []GovernmentRole{
+			GovernmentRole{
+				roleName: "U.S. President",
+				numEligable: 1,
+
+				listOfCandidates: []Candidate{
+					Candidate {
+						candidateName: "Ryan Patterson",
+						isElected: true,
+					},
+				},
+			},
+		},
+	}
 	fmt.Println(ballot.ballotName)
 	fmt.Println()
-	fmt.Println(ballot.listOfRoles[0].numOfRoles)
+	fmt.Println(ballot.listOfRoles[0].numEligable)
+	fmt.Println(ballot.listOfRoles[0].listOfCandidates[0].candidateName)
+
 }
 
 //REFRENCE: https://www.golangprograms.com/go-language/struct.html
