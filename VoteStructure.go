@@ -6,47 +6,47 @@ import (
 )
 
 type Candidate struct {
-	candidateName string `json:"CandidateName"`
-	isElected     bool   `json:"IsElected"`
+	CandidateName string `json:"candidatename"`
+	IsElected     bool   `json:"iselected"`
 }
 
 type GovernmentRole struct {
-	roleName         string      `json:"RoleName"`
-	numEligable      int         `json:"NumEligable"`
-	listOfCandidates []Candidate `json:"ListOfCandidates"`
+	RoleName         string      `json:"rolename"`
+	NumEligable      int         `json:"numeligable"`
+	ListOfCandidates []Candidate `json:"listofcandidates"`
 }
 
 type Ballot struct {
-	ballotName  string           `json:"BallotName"`
-	numOfRoles  int              `json:"NumOfRoles"`
-	listOfRoles []GovernmentRole `json:"ListOfRoles"`
+	BallotName  string           `json:"ballotname"`
+	NumOfRoles  int              `json:"numofroles"`
+	ListOfRoles []GovernmentRole `json:"listofroles"`
 }
 
 
 func main() {
 
 	ballot := &Ballot{
-		ballotName: "blockchain vote test",
-		numOfRoles: 1,
+		BallotName: "blockchain vote test",
+		NumOfRoles: 1,
 
-		listOfRoles: []GovernmentRole{
+		ListOfRoles: []GovernmentRole{
 			GovernmentRole{
-				roleName: "U.S. President",
-				numEligable: 1,
+				RoleName: "U.S. President",
+				NumEligable: 1,
 
-				listOfCandidates: []Candidate{
+				ListOfCandidates: []Candidate{
 					Candidate {
-						candidateName: "Ryan Patterson",
-						isElected: true,
+						CandidateName: "Ryan Patterson",
+						IsElected: true,
 					},
 				},
 			},
 		},
 	}
-	fmt.Println(ballot.ballotName)
+	fmt.Println(ballot.BallotName)
 	fmt.Println()
-	fmt.Println(ballot.listOfRoles[0].numEligable)
-	fmt.Println(ballot.listOfRoles[0].listOfCandidates[0].candidateName)
+	fmt.Println(ballot.ListOfRoles[0].NumEligable)
+	fmt.Println(ballot.ListOfRoles[0].ListOfCandidates[0].CandidateName)
 
 	jsonstr, _ := json.Marshal(ballot)
 	fmt.Println(string(jsonstr))
