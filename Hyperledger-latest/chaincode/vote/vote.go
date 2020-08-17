@@ -548,7 +548,7 @@ func verifyIdentity() {
 	}
 
 	contract := network.GetContract("fabcar")
-
+        /*
 	result, err := contract.EvaluateTransaction("queryAllCars")
 	if err != nil {
 		fmt.Printf("Failed to evaluate transaction: %s\n", err)
@@ -582,6 +582,7 @@ func verifyIdentity() {
 		os.Exit(1)
 	}
 	fmt.Println(string(result))
+	*/
 }
 
 func populateWallet(wallet *gateway.Wallet) error {
