@@ -1,8 +1,11 @@
 package chaincode
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
+	"strconv"
+	"strings"
 
 	"github.com/hyperledger/fabric-contract-api-go/contractapi"
 )
@@ -176,5 +179,84 @@ func (s *SmartContract) GetAllVotes(ctx contractapi.TransactionContextInterface)
 	}
 
 	return votes, nil
+}
+
+func (s *SmartContract) TallyAllVotes(ctx contractapi.TransactionContextInterface) (string, error) {
+	resultsIterator, err := ctx.GetStub().GetStateByRange("", "")
+	if err != nil {
+		return "", fmt.Errorf("Failed to get query results: " + err.Error())
+	}
+	defer resultsIterator.Close()
+
+	var buffer bytes.Buffer
+
+	bArrayMemberAlreadyWritten := false
+	for resultsIterator.HasNext() {
+		queryResponse, err := resultsIterator.Next()
+		if err != nil {
+			return "", err
+		}
+		// Add a comma before array members, suppress it for the first array member
+		if bArrayMemberAlreadyWritten == true {
+			buffer.WriteString(",")
+		}
+		// Record is a JSON object, so we write as-is
+		buffer.WriteString(string(queryResponse.Value))
+		bArrayMemberAlreadyWritten = true
+	}
+	/*
+		buffer, err := constructQueryResponseFromIteratorTallyAll(resultsIterator)
+		if err != nil {
+			return "", fmt.Errorf("Failed to construct query response: " + err.Error())
+		}
+	*/
+	resultString := buffer.String()
+	noBackSlashes := strings.Replace(resultString, "\\", "", -1)
+	noleftBrackets := strings.Replace(noBackSlashes, `{`, ``, -1)
+	norightBrackets := strings.Replace(noleftBrackets, `}`, ``, -1)
+	noQuotes := strings.Replace(norightBrackets, `"`, ``, -1)
+	splitString := strings.Split(noQuotes, ",")
+	fmt.Println(" - Begin iterating through votes")
+	var candidates []string
+	i := 0
+	for range splitString {
+		if strings.HasPrefix(splitString[i], `candidate:`) == true {
+			found := contains(candidates, splitString[i])
+			if found == false {
+				candidates = append(candidates, splitString[i])
+				i++
+			} else {
+				i++
+			}
+		} else {
+			i++
+		}
+	}
+	if len(candidates) == 0 {
+		return "", fmt.Errorf("No votes in blockchain to tally")
+	}
+	fmt.Println(" - Begin tallying votes for each candidate")
+	i = 0
+	var candidatesTally []string
+	newString := fmt.Sprint(splitString)
+	for range candidates {
+		count := strings.Count(newString, candidates[i])
+		candidatesTally = append(candidatesTally, candidates[i]+" - vote total: "+strconv.Itoa(count))
+		i++
+	}
+	strCandidatesTally := strings.Join(candidatesTally, "\n")
+	result := strings.Join(candidatesTally, " ")
+	fmt.Println(" - End tallying votes")
+	fmt.Println(strCandidatesTally)
+	return result, nil
+}
+
+func contains(s []string, e string) bool {
+	for _, a := range s {
+		if a == e {
+			return true
+		}
+	}
+	return false
 }
 
