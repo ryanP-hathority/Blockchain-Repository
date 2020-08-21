@@ -13,38 +13,30 @@ type SmartContract struct {
 }
 
 // Asset describes basic details of what makes up a simple asset
-type Asset struct {
-	ID             string `json:"ID"`
-	Color          string `json:"color"`
-	Size           int    `json:"size"`
-	Owner          string `json:"owner"`
-	AppraisedValue int    `json:"appraisedValue"`
-}
-
-// QueryResult structure used for handling result of query
-type QueryResult struct {
-	Key    string `json:"Key"`
-	Record *Asset
+type Vote struct {
+	ID        string `json:"ID"`
+	VoterName string `json:"voter"`
+	Candidate string `json:"candidate"`
 }
 
 // InitLedger adds a base set of assets to the ledger
 func (s *SmartContract) InitLedger(ctx contractapi.TransactionContextInterface) error {
-	assets := []Asset{
-		{ID: "asset1", Color: "blue", Size: 5, Owner: "Tomoko", AppraisedValue: 300},
-		{ID: "asset2", Color: "red", Size: 5, Owner: "Brad", AppraisedValue: 400},
-		{ID: "asset3", Color: "green", Size: 10, Owner: "Jin Soo", AppraisedValue: 500},
-		{ID: "asset4", Color: "yellow", Size: 10, Owner: "Max", AppraisedValue: 600},
-		{ID: "asset5", Color: "black", Size: 15, Owner: "Adriana", AppraisedValue: 700},
-		{ID: "asset6", Color: "white", Size: 15, Owner: "Michel", AppraisedValue: 800},
+	votes := []Vote{
+		{ID: "vote1", VoterName: "andrew", Candidate: "bernie"},
+		{ID: "vote2", VoterName: "ryan", Candidate: "bernie"},
+		{ID: "vote3", VoterName: "saiteja", Candidate: "biden"},
+		{ID: "vote4", VoterName: "philip", Candidate: "bernie"},
+		{ID: "vote5", VoterName: "vishwam", Candidate: "biden"},
+		{ID: "vote6", VoterName: "rhonda", Candidate: "warren"},
 	}
 
-	for _, asset := range assets {
-		assetJSON, err := json.Marshal(asset)
+	for _, vote := range votes {
+		voteJSON, err := json.Marshal(vote)
 		if err != nil {
 			return err
 		}
 
-		err = ctx.GetStub().PutState(asset.ID, assetJSON)
+		err = ctx.GetStub().PutState(vote.ID, voteJSON)
 		if err != nil {
 			return fmt.Errorf("failed to put to world state. %v", err)
 		}
@@ -54,116 +46,112 @@ func (s *SmartContract) InitLedger(ctx contractapi.TransactionContextInterface) 
 }
 
 // CreateAsset issues a new asset to the world state with given details.
-func (s *SmartContract) CreateAsset(ctx contractapi.TransactionContextInterface, id, color, owner string, size, appraisedValue int) error {
-	exists, err := s.AssetExists(ctx, id)
+func (s *SmartContract) CreateVote(ctx contractapi.TransactionContextInterface, id string, voter string, candidate string) error {
+	exists, err := s.VoteExists(ctx, id)
 	if err != nil {
 		return err
 	}
 	if exists {
-		return fmt.Errorf("the asset %s already exists", id)
+		return fmt.Errorf("the vote %s already exists", id)
 	}
 
-	asset := Asset{
-		ID:             id,
-		Color:          color,
-		Size:           size,
-		Owner:          owner,
-		AppraisedValue: appraisedValue,
+	vote := Vote{
+		ID:        id,
+		VoterName: voter,
+		Candidate: candidate,
 	}
-	assetJSON, err := json.Marshal(asset)
+	voteJSON, err := json.Marshal(vote)
 	if err != nil {
 		return err
 	}
 
-	return ctx.GetStub().PutState(id, assetJSON)
+	return ctx.GetStub().PutState(id, voteJSON)
 }
 
 // ReadAsset returns the asset stored in the world state with given id.
-func (s *SmartContract) ReadAsset(ctx contractapi.TransactionContextInterface, id string) (*Asset, error) {
-	assetJSON, err := ctx.GetStub().GetState(id)
+func (s *SmartContract) ReadVote(ctx contractapi.TransactionContextInterface, id string) (*Vote, error) {
+	voteJSON, err := ctx.GetStub().GetState(id)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read from world state: %v", err)
 	}
-	if assetJSON == nil {
-		return nil, fmt.Errorf("the asset %s does not exist", id)
+	if voteJSON == nil {
+		return nil, fmt.Errorf("the vote %s does not exist", id)
 	}
 
-	var asset *Asset
-	err = json.Unmarshal(assetJSON, &asset)
+	var vote Vote
+	err = json.Unmarshal(voteJSON, &vote)
 	if err != nil {
 		return nil, err
 	}
 
-	return asset, nil
+	return &vote, nil
 }
 
 // UpdateAsset updates an existing asset in the world state with provided parameters.
-func (s *SmartContract) UpdateAsset(ctx contractapi.TransactionContextInterface, id, color, owner string, size, appraisedValue int) error {
-	exists, err := s.AssetExists(ctx, id)
+func (s *SmartContract) UpdateVote(ctx contractapi.TransactionContextInterface, id string, voter string, candidate string) error {
+	exists, err := s.VoteExists(ctx, id)
 	if err != nil {
 		return err
 	}
 	if !exists {
-		return fmt.Errorf("the asset %s does not exist", id)
+		return fmt.Errorf("the vote %s does not exist", id)
 	}
 
 	// overwriting original asset with new asset
-	asset := Asset{
-		ID:             id,
-		Color:          color,
-		Size:           size,
-		Owner:          owner,
-		AppraisedValue: appraisedValue,
+	vote := Vote{
+		ID:        id,
+		VoterName: voter,
+		Candidate: candidate,
 	}
-	assetJSON, err := json.Marshal(asset)
+	voteJSON, err := json.Marshal(vote)
 	if err != nil {
 		return err
 	}
 
-	return ctx.GetStub().PutState(id, assetJSON)
+	return ctx.GetStub().PutState(id, voteJSON)
 }
 
 // DeleteAsset deletes an given asset from the world state.
-func (s *SmartContract) DeleteAsset(ctx contractapi.TransactionContextInterface, id string) error {
-	exists, err := s.AssetExists(ctx, id)
+func (s *SmartContract) DeleteVote(ctx contractapi.TransactionContextInterface, id string) error {
+	exists, err := s.VoteExists(ctx, id)
 	if err != nil {
 		return err
 	}
 	if !exists {
-		return fmt.Errorf("the asset %s does not exist", id)
+		return fmt.Errorf("the vote %s does not exist", id)
 	}
 
 	return ctx.GetStub().DelState(id)
 }
 
 // AssetExists returns true when asset with given ID exists in world state
-func (s *SmartContract) AssetExists(ctx contractapi.TransactionContextInterface, id string) (bool, error) {
-	assetJSON, err := ctx.GetStub().GetState(id)
+func (s *SmartContract) VoteExists(ctx contractapi.TransactionContextInterface, id string) (bool, error) {
+	voteJSON, err := ctx.GetStub().GetState(id)
 	if err != nil {
 		return false, fmt.Errorf("failed to read from world state: %v", err)
 	}
 
-	return assetJSON != nil, nil
+	return voteJSON != nil, nil
 }
 
 // TransferAsset updates the owner field of asset with given id in world state.
-func (s *SmartContract) TransferAsset(ctx contractapi.TransactionContextInterface, id string, newOwner string) error {
-	asset, err := s.ReadAsset(ctx, id)
+func (s *SmartContract) TransferVote(ctx contractapi.TransactionContextInterface, id string, newCandidate string) error {
+	vote, err := s.ReadVote(ctx, id)
 	if err != nil {
 		return err
 	}
 
-	asset.Owner = newOwner
-	assetJSON, err := json.Marshal(asset)
+	vote.Candidate = newCandidate
+	voteJSON, err := json.Marshal(vote)
 	if err != nil {
 		return err
 	}
 
-	return ctx.GetStub().PutState(id, assetJSON)
+	return ctx.GetStub().PutState(id, voteJSON)
 }
 
 // GetAllAssets returns all assets found in world state
-func (s *SmartContract) GetAllAssets(ctx contractapi.TransactionContextInterface) ([]QueryResult, error) {
+func (s *SmartContract) GetAllVotes(ctx contractapi.TransactionContextInterface) ([]*Vote, error) {
 	// range query with empty string for startKey and endKey does an
 	// open-ended query of all assets in the chaincode namespace.
 	resultsIterator, err := ctx.GetStub().GetStateByRange("", "")
@@ -172,22 +160,21 @@ func (s *SmartContract) GetAllAssets(ctx contractapi.TransactionContextInterface
 	}
 	defer resultsIterator.Close()
 
-	var results []QueryResult
+	var votes []*Vote
 	for resultsIterator.HasNext() {
 		queryResponse, err := resultsIterator.Next()
 		if err != nil {
 			return nil, err
 		}
 
-		var asset *Asset
-		err = json.Unmarshal(queryResponse.Value, &asset)
+		var vote Vote
+		err = json.Unmarshal(queryResponse.Value, &vote)
 		if err != nil {
 			return nil, err
 		}
-
-		queryResult := QueryResult{Key: queryResponse.Key, Record: asset}
-		results = append(results, queryResult)
+		votes = append(votes, &vote)
 	}
 
-	return results, nil
+	return votes, nil
 }
+
