@@ -36,7 +36,7 @@ type GovernmentRole struct {
 type Ballot struct {
         BallotName  string           `json:"ballotname"`
         NumOfRoles  int              `json:"numofroles"`
-	ID	    int              `json:"idfield"`
+	ID	    string           `json:"idfield"`
         ListOfRoles []GovernmentRole `json:"listofroles"`
 }
 
@@ -45,7 +45,7 @@ func initializeBallot() *Ballot {
 	ballot := &Ballot{
                 BallotName: "blockchain vote test",
                 NumOfRoles: 1,
-                ID: "vote1",
+                ID: "vote0",
 
                 ListOfRoles: []GovernmentRole{
                         GovernmentRole{
@@ -172,6 +172,7 @@ func initializeBallot() *Ballot {
 
 // InitLedger adds a base set of assets to the ledger
 func (s *SmartContract) InitLedger(ctx contractapi.TransactionContextInterface) error {
+	/*
 	votes := []Vote{
 		{ID: "vote1", VoterName: "andrew", Candidate: "bernie"},
 		{ID: "vote2", VoterName: "ryan", Candidate: "bernie"},
@@ -191,6 +192,13 @@ func (s *SmartContract) InitLedger(ctx contractapi.TransactionContextInterface) 
 		if err != nil {
 			return fmt.Errorf("failed to put to world state. %v", err)
 		}
+	}
+	*/
+	//------   AUGMENTED CODE  --------
+	ballot := initializeBallot()
+	err = ctx.GetStub().PutState(ballot.ID, ballot)
+	if err != nil {
+		return fmt.Errorf("failed to put to world state. %v", err)
 	}
 
 	return nil
