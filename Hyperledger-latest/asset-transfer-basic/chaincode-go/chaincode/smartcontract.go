@@ -36,6 +36,7 @@ type GovernmentRole struct {
 type Ballot struct {
         BallotName  string           `json:"ballotname"`
         NumOfRoles  int              `json:"numofroles"`
+	ID	    int              `json:"idfield"`
         ListOfRoles []GovernmentRole `json:"listofroles"`
 }
 
@@ -196,7 +197,9 @@ func (s *SmartContract) InitLedger(ctx contractapi.TransactionContextInterface) 
 }
 
 // CreateAsset issues a new asset to the world state with given details.
-func (s *SmartContract) CreateVote(ctx contractapi.TransactionContextInterface, id string, voter string, candidate string) error {
+func (s *SmartContract) CreateVote(ctx contractapi.TransactionContextInterface, string ballotAsJSON) error {
+
+	/*
 	exists, err := s.VoteExists(ctx, id)
 	if err != nil {
 		return err
@@ -211,6 +214,23 @@ func (s *SmartContract) CreateVote(ctx contractapi.TransactionContextInterface, 
 		Candidate: candidate,
 	}
 	voteJSON, err := json.Marshal(vote)
+	if err != nil {
+		return err
+	}
+
+	*/
+        //--------   AUGMENTED CODE----------
+	var ballot Ballot
+	err := Unmarshal(ballotAsJSON, &ballot)
+	if(err != nil) {
+		return err
+	}
+	exists, err := s.VoteExists(ctx, ballot.ID)
+	if exists {
+		return fmt.Errorf("The vote %s already exists", ballot.ID)
+	}
+
+	voteJSON, err := json.Marshal(ballot)
 	if err != nil {
 		return err
 	}
